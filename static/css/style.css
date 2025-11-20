@@ -1,0 +1,218 @@
+/* Main Layout */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.container-fluid {
+    height: 100vh;
+    padding: 0;
+}
+
+.row {
+    height: 100%;
+    margin: 0;
+}
+
+/* Sidebar */
+.sidebar {
+    height: 100vh;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-right: 1px solid #dee2e6;
+}
+
+/* Graph Container */
+.graph-container {
+    height: 100vh;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+#cy {
+    width: 100%;
+    flex-grow: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+
+/* Toolbar */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+/* Node Details Panel */
+.node-details {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+/* List Styling */
+.list-group-item {
+    cursor: pointer;
+}
+
+.list-group-item:hover {
+    background-color: #f1f1f1;
+}
+
+.list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Node and Edge Styling (will be mostly handled by Cytoscape) */
+.user-node {
+    background-color: #4e73df;
+}
+
+.transaction-node {
+    background-color: #1cc88a;
+}
+
+/* Relationship Type Colors */
+.relationship-SENT {
+    background-color: #f6c23e;
+}
+
+.relationship-RECEIVED_BY {
+    background-color: #36b9cc;
+}
+
+.relationship-SHARED_EMAIL {
+    background-color: #e74a3b;
+}
+
+.relationship-SHARED_PHONE {
+    background-color: #fd7e14;
+}
+
+.relationship-SHARED_ADDRESS {
+    background-color: #6f42c1;
+}
+
+.relationship-SHARED_PAYMENT_METHOD {
+    background-color: #20c997;
+}
+
+.relationship-LINKED_TO {
+    background-color: #6c757d;
+}
+
+.relationship-PARENT_OF {
+    background-color: #0d6efd;
+}
+
+.relationship-SUBSIDIARY_OF {
+    background-color: #6610f2;
+}
+
+.relationship-DIRECTOR_OF {
+    background-color: #d63384;
+}
+
+.relationship-SHAREHOLDER_OF {
+    background-color: #dc3545;
+}
+
+.relationship-LEGAL_ENTITY_OF {
+    background-color: #198754;
+}
+
+.relationship-COMPOSITE {
+    background-color: #0dcaf0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        height: auto;
+        max-height: 300px;
+    }
+    
+    .graph-container {
+        height: calc(100vh - 300px);
+    }
+    
+    .node-details {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+    }
+}
+
+/* Tooltip styling */
+.tippy-box {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Loading indicator */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Legend */
+.legend {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+/* Checkbox styling */
+.form-check {
+    margin-bottom: 5px;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
