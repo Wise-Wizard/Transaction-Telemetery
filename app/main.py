@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.api.endpoints import router
 from app.database.connection import db
+from app.utils.init_db import init_database
 import uvicorn
 
 # Define lifespan context manager
@@ -46,6 +47,14 @@ async def root():
 async def visualization():
     # Serve the visualization page
     return open("static/index.html").read()
+
+@app.get("/api/init-db")
+async def init_db_endpoint():
+    try:
+        result = init_database()
+        return {"message": "Database initialized successfully", "details": str(result)}
+    except Exception as e:
+        return {"message": "Initialization failed", "error": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
