@@ -4,6 +4,7 @@ from app.database.operations import GraphOperations
 from app.api.graph_data import GraphDataService
 from app.services.analytics import GraphAnalyticsService
 from app.utils.generate_data import generate_and_save_data
+from app.utils.init_db import init_database
 from typing import List, Dict, Any, Optional
 
 router = APIRouter()
@@ -238,6 +239,22 @@ def get_graph_metrics():
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error calculating graph metrics: {str(e)}")
+
+@router.post("/init-db")
+def init_db(background_tasks: BackgroundTasks):
+    """
+    Initialize the database with test data (runs in background)
+    """
+    background_tasks.add_task(init_database)
+    return {"message": "Database initialization started in the background. Check logs for progress."}
+
+@router.get("/init-db")
+def trigger_init_db(background_tasks: BackgroundTasks):
+    """
+    Trigger database initialization via GET request (runs in background)
+    """
+    background_tasks.add_task(init_database)
+    return {"message": "Database initialization started in the background. Check logs for progress."}
 
 @router.get("/export/json")
 def export_graph_json():
