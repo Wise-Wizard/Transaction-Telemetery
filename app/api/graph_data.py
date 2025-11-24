@@ -25,13 +25,16 @@ class GraphDataService:
     @staticmethod
     def _get_all_nodes(limit: int = 1000) -> List[Dict[str, Any]]:
         """
-        Get nodes (users and transactions) from the graph database
+        Get nodes (users and transactions) from the graph database.
+        Prioritizes the latest transactions and their connected users to ensure a connected graph.
         """
         query = """
-        MATCH (n)
-        WHERE n:User OR n:Transaction
-        RETURN n
-        LIMIT $limit
+        MATCH (t:Transaction)
+        WITH t ORDER BY t.timestamp DESC LIMIT $limit
+        MATCH (sender:User)-[:SENT]->(t)-[:RECEIVED_BY]->(receiver:User)
+        WITH collect(t) + collect(sender) + collect(receiver) as nodes
+        UNWIND nodes as n
+        RETURN DISTINCT n
         """
 
         result = db.execute_query(query, {"limit": limit})

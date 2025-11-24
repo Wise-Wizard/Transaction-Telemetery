@@ -57,7 +57,33 @@
             <div class="col-md-3 sidebar">
                 <h1 class="mt-3 mb-4">Graph Explorer</h1>
 
-                <!-- Search and Filter Section -->
+                <!-- Stats Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-chart-bar me-2"></i>Database Statistics
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Users:</span>
+                        <span id="stat-users" class="badge bg-primary rounded-pill">Loading...</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Transactions:</span>
+                        <span id="stat-transactions" class="badge bg-success rounded-pill">Loading...</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Relationships:</span>
+                        <span id="stat-relationships" class="badge bg-secondary rounded-pill">Loading...</span>
+                    </div>
+                    <hr>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Visualization limited to latest 1000 transactions for performance.
+                    </small>
+                </div>
+            </div>
+
+            <!-- Search and Filter Section -->
                 <div class="card mb-3">
                     <div class="card-header">
                         <h5>Search & Filter</h5>

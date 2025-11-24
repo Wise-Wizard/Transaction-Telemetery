@@ -109,6 +109,37 @@ async def detect_relationships():
     GraphOperations.detect_and_create_relationships()
     return {"message": "Relationships detected and created successfully"}
 
+@router.get("/stats", response_model=Dict[str, int])
+async def get_stats():
+    """
+    Get statistics about the graph database (counts of nodes and relationships)
+    """
+    query = """
+    CALL {
+        MATCH (u:User) RETURN count(u) as user_count
+    }
+    CALL {
+        MATCH (t:Transaction) RETURN count(t) as transaction_count
+    }
+    CALL {
+        MATCH ()-[r]->() RETURN count(r) as relationship_count
+    }
+    RETURN user_count, transaction_count, relationship_count
+    """
+    
+    try:
+        result = db.execute_query(query)
+        if result:
+            record = result[0]
+            return {
+                "users": record["user_count"],
+                "transactions": record["transaction_count"],
+                "relationships": record["relationship_count"]
+            }
+        return {"users": 0, "transactions": 0, "relationships": 0}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching stats: {str(e)}")
+
 @router.get("/graph-data")
 async def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
     """
