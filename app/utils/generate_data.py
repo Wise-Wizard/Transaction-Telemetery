@@ -279,7 +279,7 @@ def generate_and_save_data(num_users=10, num_companies=5, num_transactions=20, d
     
     # Process transactions in batches to avoid memory issues
     batch_size = 1000
-    total_transactions = []
+    total_transactions_count = 0
     
     for i in range(0, num_transactions, batch_size):
         current_batch_size = min(batch_size, num_transactions - i)
@@ -292,11 +292,9 @@ def generate_and_save_data(num_users=10, num_companies=5, num_transactions=20, d
             tx.id = f"tx_{i + j + 1}"
             
         GraphOperations.create_transactions_bulk(batch_transactions)
-        total_transactions.extend(batch_transactions)
+        total_transactions_count += len(batch_transactions)
         print(f"Saved batch {i//batch_size + 1}")
         
-    transactions = total_transactions
-    
     # Generate business relationships
     relationships = generate_business_relationships(users, companies)
     for relationship in relationships:
@@ -313,10 +311,10 @@ def generate_and_save_data(num_users=10, num_companies=5, num_transactions=20, d
     
     print("Data generation completed!")
     return {
-        "users": users,
-        "companies": companies,
-        "transactions": transactions,
-        "relationships": relationships
+        "users_count": len(users),
+        "companies_count": len(companies),
+        "transactions_count": total_transactions_count,
+        "relationships_count": len(relationships)
     }
 
 def main():
