@@ -114,30 +114,26 @@ async def get_stats():
     """
     Get statistics about the graph database (counts of nodes and relationships)
     """
-    query = """
-    CALL {
-        MATCH (u:User) RETURN count(u) as user_count
-    }
-    CALL {
-        MATCH (t:Transaction) RETURN count(t) as transaction_count
-    }
-    CALL {
-        MATCH ()-[r]->() RETURN count(r) as relationship_count
-    }
-    RETURN user_count, transaction_count, relationship_count
-    """
-    
     try:
-        result = db.execute_query(query)
-        if result:
-            record = result[0]
-            return {
-                "users": record["user_count"],
-                "transactions": record["transaction_count"],
-                "relationships": record["relationship_count"]
-            }
-        return {"users": 0, "transactions": 0, "relationships": 0}
+        # Execute separate queries for robustness
+        user_result = db.execute_query("MATCH (u:User) RETURN count(u) as count")
+        user_count = user_result[0]["count"] if user_result else 0
+        
+        tx_result = db.execute_query("MATCH (t:Transaction) RETURN count(t) as count")
+        tx_count = tx_result[0]["count"] if tx_result else 0
+        
+        # Use a more specific match for relationships to ensure it hits the count store if possible
+        # or just count all relationships
+        rel_result = db.execute_query("MATCH ()-[r]->() RETURN count(r) as count")
+        rel_count = rel_result[0]["count"] if rel_result else 0
+        
+        return {
+            "users": user_count,
+            "transactions": tx_count,
+            "relationships": rel_count
+        }
     except Exception as e:
+        print(f"Error fetching stats: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching stats: {str(e)}")
 
 @router.get("/graph-data")
