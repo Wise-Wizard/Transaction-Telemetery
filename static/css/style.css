@@ -3,22 +3,24 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    /* overflow: hidden; Removed to allow scrolling */
 }
 
 .container-fluid {
-    height: 100vh;
+    min-height: 100vh;
     padding: 0;
 }
 
 .row {
-    height: 100%;
+    min-height: 100%;
     margin: 0;
 }
 
 /* Sidebar */
 .sidebar {
-    height: 100vh;
+    height: 100vh; /* Keep sidebar fixed height */
+    position: sticky;
+    top: 0;
     overflow-y: auto;
     background-color: #f8f9fa;
     padding: 15px;
@@ -27,7 +29,8 @@ html, body {
 
 /* Graph Container */
 .graph-container {
-    height: 100vh;
+    height: auto; /* Allow it to grow */
+    min-height: 100vh;
     padding: 15px;
     display: flex;
     flex-direction: column;
@@ -35,10 +38,12 @@ html, body {
 
 #cy {
     width: 100%;
-    flex-grow: 1;
+    height: 70vh; /* Fixed height for graph */
+    min-height: 500px;
     border: 1px solid #dee2e6;
     border-radius: 5px;
     background-color: #f8f9fa;
+    margin-bottom: 20px;
 }
 
 /* Toolbar */
