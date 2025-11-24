@@ -50,29 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load data from API
     loadGraphData();
     
-    // Load statistics
-    loadStats();
-
     // Set up event listeners
     setupEventListeners();
 });
-
-// Load database statistics
-async function loadStats() {
-    try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
-        
-        document.getElementById('stat-users').textContent = data.users.toLocaleString();
-        document.getElementById('stat-transactions').textContent = data.transactions.toLocaleString();
-        document.getElementById('stat-relationships').textContent = data.relationships.toLocaleString();
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        document.getElementById('stat-users').textContent = 'Error';
-        document.getElementById('stat-transactions').textContent = 'Error';
-        document.getElementById('stat-relationships').textContent = 'Error';
-    }
-}
 
 // Initialize Cytoscape with default settings
 function initCytoscape() {

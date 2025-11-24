@@ -118,40 +118,13 @@ def detect_relationships():
     GraphOperations.detect_and_create_relationships()
     return {"message": "Relationships detected and created successfully"}
 
-@router.get("/stats", response_model=Dict[str, int])
-def get_stats():
-    """
-    Get statistics about the graph database (counts of nodes and relationships)
-    """
-    try:
-        # Execute separate queries for robustness
-        user_result = db.execute_query("MATCH (u:User) RETURN count(u) as count")
-        user_count = user_result[0]["count"] if user_result else 0
-        
-        tx_result = db.execute_query("MATCH (t:Transaction) RETURN count(t) as count")
-        tx_count = tx_result[0]["count"] if tx_result else 0
-        
-        # Use a more specific match for relationships to ensure it hits the count store if possible
-        # or just count all relationships
-        rel_result = db.execute_query("MATCH ()-[r]->() RETURN count(r) as count")
-        rel_count = rel_result[0]["count"] if rel_result else 0
-        
-        return {
-            "users": user_count,
-            "transactions": tx_count,
-            "relationships": rel_count
-        }
-    except Exception as e:
-        print(f"Error fetching stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching stats: {str(e)}")
-
 @router.get("/graph-data")
-def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
+def get_graph_data(limit: int = Query(150000, ge=1, le=200000)):
     """
     Get nodes and edges from the graph database in a format suitable for visualization
     
     Args:
-        limit: Maximum number of nodes to return (default: 1000, max: 10000)
+        limit: Maximum number of nodes to return (default: 150000, max: 200000)
     """
     from fastapi.responses import JSONResponse
 

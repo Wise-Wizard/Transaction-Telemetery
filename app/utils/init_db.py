@@ -5,9 +5,9 @@ def init_database():
     """Initialize the database with test data"""
     print("Initializing database with test data...")
     
-    # Generate 100k transactions as requested
-    # We use 1000 users and 50 companies to create a realistic graph
-    result = generate_and_save_data(
+    # Generate data
+    # User requested: 1000 users, 100k transactions
+    data = generate_and_save_data(
         num_users=1000,
         num_companies=50,
         num_transactions=100000,
