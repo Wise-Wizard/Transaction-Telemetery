@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load data from API
     loadGraphData();
     
+    // Initialize table
+    loadTransactionsTable();
+    
     // Set up event listeners
     setupEventListeners();
 });
@@ -174,7 +177,7 @@ async function loadGraphData() {
 
         // Fetch graph data
         console.log('Fetching graph data...');
-        const response = await fetch('/api/graph-data');
+        const response = await fetch('/api/graph-data?limit=1000');
         const data = await response.json();
         console.log('Graph data received:', data);
 
@@ -680,6 +683,131 @@ async function searchTransactions(query) {
         console.error('Error searching transactions:', error);
         container.innerHTML = '<div class="text-danger p-2 text-center">Error searching transactions</div>';
     }
+}
+
+// Table state
+let currentPage = 1;
+let currentSort = 'timestamp';
+let currentOrder = 'desc';
+const itemsPerPage = 10;
+
+// Load transactions table
+async function loadTransactionsTable() {
+    const tbody = document.getElementById('transactionsTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading...</td></tr>';
+    
+    try {
+        const skip = (currentPage - 1) * itemsPerPage;
+        let url = `/api/transactions?skip=${skip}&limit=${itemsPerPage}&sort_by=${currentSort}&order=${currentOrder}`;
+        
+        // Add search if exists
+        const searchInput = document.getElementById('transactionSearchInput');
+        if (searchInput && searchInput.value) {
+            url += `&search=${encodeURIComponent(searchInput.value)}`;
+        }
+        
+        const response = await fetch(url);
+        const transactions = await response.json();
+        
+        renderTable(transactions);
+        updatePagination(transactions.length);
+    } catch (error) {
+        console.error('Error loading table:', error);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>';
+    }
+}
+
+// Render table rows
+function renderTable(transactions) {
+    const tbody = document.getElementById('transactionsTableBody');
+    tbody.innerHTML = '';
+    
+    if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found</td></tr>';
+        return;
+    }
+    
+    transactions.forEach(tx => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><small>${tx.id}</small></td>
+            <td>${tx.amount}</td>
+            <td>${tx.currency}</td>
+            <td><small>${new Date(tx.timestamp).toLocaleString()}</small></td>
+            <td><span class="badge bg-${getStatusColor(tx.status)}">${tx.status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary view-btn" data-id="${tx.id}">
+                    <i class="fas fa-project-diagram"></i> View
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    // Add event listeners to buttons
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            addNodeToGraph(id, 'Transaction');
+            // Scroll to graph
+            document.getElementById('cy').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+}
+
+// Get status color
+function getStatusColor(status) {
+    switch(status.toLowerCase()) {
+        case 'completed': return 'success';
+        case 'pending': return 'warning';
+        case 'failed': return 'danger';
+        default: return 'secondary';
+    }
+}
+
+// Update pagination controls
+function updatePagination(count) {
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
+    
+    pageInfo.textContent = `Page ${currentPage}`;
+    
+    if (currentPage <= 1) {
+        prevBtn.classList.add('disabled');
+    } else {
+        prevBtn.classList.remove('disabled');
+    }
+    
+    // Simple check: if we got fewer items than requested, we're at the end
+    if (count < itemsPerPage) {
+        nextBtn.classList.add('disabled');
+    } else {
+        nextBtn.classList.remove('disabled');
+    }
+    
+    // Re-attach listeners
+    prevBtn.onclick = () => changePage(-1);
+    nextBtn.onclick = () => changePage(1);
+}
+
+// Change page
+function changePage(delta) {
+    if ((delta < 0 && currentPage === 1)) return;
+    currentPage += delta;
+    loadTransactionsTable();
+}
+
+// Sort table
+window.sortTable = function(column) {
+    if (currentSort === column) {
+        currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort = column;
+        currentOrder = 'desc';
+    }
+    currentPage = 1; // Reset to first page
+    loadTransactionsTable();
 }
 
 // Add node to graph dynamically

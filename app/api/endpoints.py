@@ -53,12 +53,20 @@ def get_all_users(
 def get_all_transactions(
     skip: int = 0, 
     limit: int = 100,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    sort_by: str = "timestamp",
+    order: str = "desc"
 ):
     """
-    Get all transactions from the graph database with optional search
+    Get all transactions from the graph database with optional search and sorting
     """
-    transactions = GraphOperations.get_all_transactions(skip=skip, limit=limit, search_query=search)
+    transactions = GraphOperations.get_all_transactions(
+        skip=skip, 
+        limit=limit, 
+        search_query=search,
+        sort_by=sort_by,
+        order=order
+    )
     return transactions
 
 @router.get("/relationships/user/{user_id}", response_model=Dict[str, Any])
@@ -119,12 +127,12 @@ def detect_relationships():
     return {"message": "Relationships detected and created successfully"}
 
 @router.get("/graph-data")
-def get_graph_data(limit: int = Query(150000, ge=1, le=200000)):
+def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
     """
     Get nodes and edges from the graph database in a format suitable for visualization
     
     Args:
-        limit: Maximum number of nodes to return (default: 150000, max: 200000)
+        limit: Maximum number of nodes to return (default: 1000, max: 10000)
     """
     from fastapi.responses import JSONResponse
 

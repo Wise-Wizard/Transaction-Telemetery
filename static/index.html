@@ -154,7 +154,48 @@
                     </div>
                 </div>
 
-                <!-- Graph Canvas -->
+                <!-- Transaction Explorer Card -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fas fa-table me-2"></i>Transaction Explorer
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm" id="transactionsTable">
+                            <thead>
+                                <tr>
+                                    <th style="cursor: pointer" onclick="sortTable('id')">ID <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer" onclick="sortTable('amount')">Amount <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer" onclick="sortTable('currency')">Currency <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer" onclick="sortTable('timestamp')">Timestamp <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer" onclick="sortTable('status')">Status <i class="fas fa-sort"></i></th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <!-- Rows will be populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav aria-label="Transaction pagination">
+                        <ul class="pagination justify-content-center" id="pagination">
+                            <li class="page-item disabled" id="prevPage">
+                                <a class="page-link" href="#" tabindex="-1">Previous</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link" id="pageInfo">Page 1</span>
+                            </li>
+                            <li class="page-item" id="nextPage">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Graph Canvas -->
                 <div id="cy"></div>
 
                 <!-- Node Details Panel -->

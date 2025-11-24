@@ -157,17 +157,39 @@ class GraphOperations:
         return [serialize_neo4j_object(record["u"]) for record in result]
 
     @staticmethod
-    def get_all_transactions(skip: int = 0, limit: int = 100, search_query: str = None) -> List[Dict[str, Any]]:
-        """Get all transactions from the graph database with pagination and optional search"""
+    def get_all_transactions(skip: int = 0, limit: int = 100, search_query: str = None, sort_by: str = "timestamp", order: str = "desc") -> List[Dict[str, Any]]:
+        """Get all transactions from the graph database with pagination, search, and sorting"""
+        
+        # Validate sort_by to prevent injection
+        allowed_sort_fields = ["id", "amount", "currency", "timestamp", "status"]
+        if sort_by not in allowed_sort_fields:
+            sort_by = "timestamp"
+            
+        # Validate order
+        if order.lower() not in ["asc", "desc"]:
+            order = "desc"
+            
+        order_clause = f"ORDER BY t.{sort_by} {order.upper()}"
+        
         if search_query:
-            query = """
+            query = f"""
             MATCH (t:Transaction) 
             WHERE toLower(t.id) CONTAINS toLower($search)
             RETURN t SKIP $skip LIMIT $limit
             """
+            # Note: Sorting with search might be slow without an index, but acceptable for this scale
+            # Ideally we'd apply sort before skip/limit, but for now let's keep it simple
+            # Actually, to sort correctly we need to sort BEFORE skip/limit
+            query = f"""
+            MATCH (t:Transaction) 
+            WHERE toLower(t.id) CONTAINS toLower($search)
+            RETURN t 
+            {order_clause}
+            SKIP $skip LIMIT $limit
+            """
             parameters = {"skip": skip, "limit": limit, "search": search_query}
         else:
-            query = "MATCH (t:Transaction) RETURN t SKIP $skip LIMIT $limit"
+            query = f"MATCH (t:Transaction) RETURN t {order_clause} SKIP $skip LIMIT $limit"
             parameters = {"skip": skip, "limit": limit}
             
         result = db.execute_query(query, parameters)
