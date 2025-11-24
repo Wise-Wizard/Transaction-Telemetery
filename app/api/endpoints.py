@@ -37,19 +37,27 @@ async def create_transaction(transaction: Transaction):
     return {"message": "Transaction created successfully", "transaction_id": transaction.id}
 
 @router.get("/users", response_model=List[Dict[str, Any]])
-async def get_all_users(skip: int = 0, limit: int = 100):
+async def get_all_users(
+    skip: int = 0, 
+    limit: int = 100,
+    search: Optional[str] = None
+):
     """
-    Get all users from the graph database
+    Get all users from the graph database with optional search
     """
-    users = GraphOperations.get_all_users(skip=skip, limit=limit)
+    users = GraphOperations.get_all_users(skip=skip, limit=limit, search_query=search)
     return users
 
 @router.get("/transactions", response_model=List[Dict[str, Any]])
-async def get_all_transactions(skip: int = 0, limit: int = 100):
+async def get_all_transactions(
+    skip: int = 0, 
+    limit: int = 100,
+    search: Optional[str] = None
+):
     """
-    Get all transactions from the graph database
+    Get all transactions from the graph database with optional search
     """
-    transactions = GraphOperations.get_all_transactions(skip=skip, limit=limit)
+    transactions = GraphOperations.get_all_transactions(skip=skip, limit=limit, search_query=search)
     return transactions
 
 @router.get("/relationships/user/{user_id}", response_model=Dict[str, Any])

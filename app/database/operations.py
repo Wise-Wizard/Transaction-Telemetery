@@ -140,17 +140,37 @@ class GraphOperations:
         return len(transactions)
 
     @staticmethod
-    def get_all_users(skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get all users from the graph database with pagination"""
-        query = "MATCH (u:User) RETURN u SKIP $skip LIMIT $limit"
-        result = db.execute_query(query, {"skip": skip, "limit": limit})
+    def get_all_users(skip: int = 0, limit: int = 100, search_query: str = None) -> List[Dict[str, Any]]:
+        """Get all users from the graph database with pagination and optional search"""
+        if search_query:
+            query = """
+            MATCH (u:User) 
+            WHERE toLower(u.name) CONTAINS toLower($search) OR toLower(u.id) CONTAINS toLower($search)
+            RETURN u SKIP $skip LIMIT $limit
+            """
+            parameters = {"skip": skip, "limit": limit, "search": search_query}
+        else:
+            query = "MATCH (u:User) RETURN u SKIP $skip LIMIT $limit"
+            parameters = {"skip": skip, "limit": limit}
+            
+        result = db.execute_query(query, parameters)
         return [serialize_neo4j_object(record["u"]) for record in result]
 
     @staticmethod
-    def get_all_transactions(skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get all transactions from the graph database with pagination"""
-        query = "MATCH (t:Transaction) RETURN t SKIP $skip LIMIT $limit"
-        result = db.execute_query(query, {"skip": skip, "limit": limit})
+    def get_all_transactions(skip: int = 0, limit: int = 100, search_query: str = None) -> List[Dict[str, Any]]:
+        """Get all transactions from the graph database with pagination and optional search"""
+        if search_query:
+            query = """
+            MATCH (t:Transaction) 
+            WHERE toLower(t.id) CONTAINS toLower($search)
+            RETURN t SKIP $skip LIMIT $limit
+            """
+            parameters = {"skip": skip, "limit": limit, "search": search_query}
+        else:
+            query = "MATCH (t:Transaction) RETURN t SKIP $skip LIMIT $limit"
+            parameters = {"skip": skip, "limit": limit}
+            
+        result = db.execute_query(query, parameters)
         return [serialize_neo4j_object(record["t"]) for record in result]
 
     @staticmethod

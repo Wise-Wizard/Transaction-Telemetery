@@ -622,7 +622,142 @@ function hideLoading() {
     }
 }
 
-// Set up event listeners
+// Search users via API
+async function searchUsers(query) {
+    const container = document.getElementById('usersList');
+    container.innerHTML = '<div class="text-center p-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>';
+    
+    try {
+        let url = '/api/users?limit=50';
+        if (query) {
+            url += `&search=${encodeURIComponent(query)}`;
+        }
+        
+        const response = await fetch(url);
+        const users = await response.json();
+        
+        container.innerHTML = '';
+        
+        if (users.length === 0) {
+            container.innerHTML = '<div class="text-muted p-2 text-center">No users found</div>';
+            return;
+        }
+
+        users.forEach(user => {
+            const item = document.createElement('a');
+            item.className = 'list-group-item list-group-item-action';
+            item.setAttribute('data-id', user.id);
+            item.textContent = user.name || user.id;
+
+            item.addEventListener('click', async function() {
+                const nodeId = this.getAttribute('data-id');
+                await addNodeToGraph(nodeId, 'User');
+            });
+
+            container.appendChild(item);
+        });
+    } catch (error) {
+        console.error('Error searching users:', error);
+        container.innerHTML = '<div class="text-danger p-2 text-center">Error searching users</div>';
+    }
+}
+
+// Search transactions via API
+async function searchTransactions(query) {
+    const container = document.getElementById('transactionsList');
+    container.innerHTML = '<div class="text-center p-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>';
+    
+    try {
+        let url = '/api/transactions?limit=50';
+        if (query) {
+            url += `&search=${encodeURIComponent(query)}`;
+        }
+        
+        const response = await fetch(url);
+        const transactions = await response.json();
+        
+        container.innerHTML = '';
+        
+        if (transactions.length === 0) {
+            container.innerHTML = '<div class="text-muted p-2 text-center">No transactions found</div>';
+            return;
+        }
+
+        transactions.forEach(tx => {
+            const item = document.createElement('a');
+            item.className = 'list-group-item list-group-item-action';
+            item.setAttribute('data-id', tx.id);
+            item.textContent = `Transaction: ${tx.amount} ${tx.currency}`;
+
+            item.addEventListener('click', async function() {
+                const nodeId = this.getAttribute('data-id');
+                await addNodeToGraph(nodeId, 'Transaction');
+            });
+
+            container.appendChild(item);
+        });
+    } catch (error) {
+        console.error('Error searching transactions:', error);
+        container.innerHTML = '<div class="text-danger p-2 text-center">Error searching transactions</div>';
+    }
+}
+
+// Add node to graph dynamically
+async function addNodeToGraph(nodeId, type) {
+    // Check if node already exists
+    let node = cy.getElementById(nodeId);
+    
+    if (node.length === 0) {
+        // Show loading
+        showLoading();
+        try {
+            // Fetch relationships (which includes the node itself)
+            const url = type === 'User' 
+                ? `/api/relationships/user/${nodeId}`
+                : `/api/relationships/transaction/${nodeId}`;
+                
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch node details');
+            
+            const data = await response.json();
+            
+            // Add the main node
+            const mainNodeData = type === 'User' ? data.user : data.transaction;
+            
+            // Format node for Cytoscape
+            const cyNode = {
+                group: 'nodes',
+                data: {
+                    id: mainNodeData.id,
+                    type: type,
+                    label: type === 'User' ? (mainNodeData.name || 'Unknown') : `Transaction: ${mainNodeData.amount} ${mainNodeData.currency}`,
+                    ...mainNodeData
+                }
+            };
+            
+            cy.add(cyNode);
+            node = cy.getElementById(nodeId);
+            
+            // Add related nodes and edges if they don't exist
+            // This part simplifies adding neighbors - a full implementation would parse the relationships object
+            // For now, we just ensure the main node is added and selected
+            
+            console.log(`Added ${type} ${nodeId} to graph`);
+            
+        } catch (error) {
+            console.error(`Error adding ${type} to graph:`, error);
+            alert(`Failed to load ${type} details`);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    if (node.length > 0) {
+        selectNode(node);
+    }
+}
+
+// Setup event listeners
 function setupEventListeners() {
     // Search input
     document.getElementById('searchInput').addEventListener('input', filterGraph);
@@ -631,25 +766,29 @@ function setupEventListeners() {
     document.getElementById('showUsers').addEventListener('change', filterGraph);
     document.getElementById('showTransactions').addEventListener('change', filterGraph);
 
-    // User search
+    // User search (Server-side)
+    let userSearchTimeout;
     document.getElementById('userSearchInput').addEventListener('input', function() {
-        filterList('usersList', this.value);
+        clearTimeout(userSearchTimeout);
+        userSearchTimeout = setTimeout(() => searchUsers(this.value), 300);
     });
 
-    // Transaction search
+    // Transaction search (Server-side)
+    let txSearchTimeout;
     document.getElementById('transactionSearchInput').addEventListener('input', function() {
-        filterList('transactionsList', this.value);
+        clearTimeout(txSearchTimeout);
+        txSearchTimeout = setTimeout(() => searchTransactions(this.value), 300);
     });
 
     // Clear search buttons
     document.getElementById('clearUserSearch').addEventListener('click', function() {
         document.getElementById('userSearchInput').value = '';
-        filterList('usersList', '');
+        searchUsers('');
     });
 
     document.getElementById('clearTransactionSearch').addEventListener('click', function() {
         document.getElementById('transactionSearchInput').value = '';
-        filterList('transactionsList', '');
+        searchTransactions('');
     });
 
     // Toolbar buttons
@@ -674,25 +813,10 @@ function setupEventListeners() {
     document.getElementById('collapseTransactionsBtn').addEventListener('click', function() {
         toggleCollapse('transactionsListContainer', this);
     });
-}
-
-// Filter list based on search text
-function filterList(listId, searchText) {
-    const list = document.getElementById(listId);
-    const items = list.getElementsByClassName('list-group-item');
-
-    searchText = searchText.toLowerCase();
-
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const text = item.textContent.toLowerCase();
-
-        if (text.includes(searchText)) {
-            item.style.display = '';
-        } else {
-            item.style.display = 'none';
-        }
-    }
+    
+    // Initial load of lists
+    searchUsers('');
+    searchTransactions('');
 }
 
 // Toggle collapse
