@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 router = APIRouter()
 
 @router.post("/users", response_model=Dict[str, Any])
-async def create_user(user: User):
+def create_user(user: User):
     """
     Create a new user in the graph database
     """
@@ -23,7 +23,7 @@ async def create_user(user: User):
     return {"message": "User created successfully", "user_id": user.id}
 
 @router.post("/transactions", response_model=Dict[str, Any])
-async def create_transaction(transaction: Transaction):
+def create_transaction(transaction: Transaction):
     """
     Create a new transaction in the graph database
     """
@@ -37,7 +37,7 @@ async def create_transaction(transaction: Transaction):
     return {"message": "Transaction created successfully", "transaction_id": transaction.id}
 
 @router.get("/users", response_model=List[Dict[str, Any]])
-async def get_all_users(
+def get_all_users(
     skip: int = 0, 
     limit: int = 100,
     search: Optional[str] = None
@@ -49,7 +49,7 @@ async def get_all_users(
     return users
 
 @router.get("/transactions", response_model=List[Dict[str, Any]])
-async def get_all_transactions(
+def get_all_transactions(
     skip: int = 0, 
     limit: int = 100,
     search: Optional[str] = None
@@ -61,7 +61,7 @@ async def get_all_transactions(
     return transactions
 
 @router.get("/relationships/user/{user_id}", response_model=Dict[str, Any])
-async def get_user_relationships(user_id: str):
+def get_user_relationships(user_id: str):
     """
     Get all relationships of a user
     """
@@ -72,7 +72,7 @@ async def get_user_relationships(user_id: str):
     return relationships
 
 @router.get("/relationships/transaction/{transaction_id}", response_model=Dict[str, Any])
-async def get_transaction_relationships(transaction_id: str):
+def get_transaction_relationships(transaction_id: str):
     """
     Get all relationships of a transaction
     """
@@ -83,7 +83,7 @@ async def get_transaction_relationships(transaction_id: str):
     return relationships
 
 @router.post("/business-relationships", response_model=Dict[str, Any])
-async def create_business_relationship(relationship: BusinessRelationship):
+def create_business_relationship(relationship: BusinessRelationship):
     """
     Create a new business relationship between two users
     """
@@ -99,7 +99,7 @@ async def create_business_relationship(relationship: BusinessRelationship):
     }
 
 @router.get("/business-relationships/user/{user_id}", response_model=Dict[str, Any])
-async def get_business_relationships(user_id: str):
+def get_business_relationships(user_id: str):
     """
     Get all business relationships of a user
     """
@@ -110,7 +110,7 @@ async def get_business_relationships(user_id: str):
     return relationships
 
 @router.post("/detect-relationships", response_model=Dict[str, Any])
-async def detect_relationships():
+def detect_relationships():
     """
     Detect and create relationships between users and transactions
     """
@@ -118,7 +118,7 @@ async def detect_relationships():
     return {"message": "Relationships detected and created successfully"}
 
 @router.get("/stats", response_model=Dict[str, int])
-async def get_stats():
+def get_stats():
     """
     Get statistics about the graph database (counts of nodes and relationships)
     """
@@ -145,7 +145,7 @@ async def get_stats():
         raise HTTPException(status_code=500, detail=f"Error fetching stats: {str(e)}")
 
 @router.get("/graph-data")
-async def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
+def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
     """
     Get nodes and edges from the graph database in a format suitable for visualization
     
@@ -182,7 +182,7 @@ async def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
     return JSONResponse(content=converted_data)
 
 @router.get("/analytics/shortest-path", response_model=Dict[str, Any])
-async def find_shortest_path(
+def find_shortest_path(
     source_id: str,
     target_id: str,
     relationship_types: Optional[List[str]] = Query(None)
@@ -205,7 +205,7 @@ async def find_shortest_path(
         raise HTTPException(status_code=500, detail=f"Error finding shortest path: {str(e)}")
 
 @router.get("/analytics/transaction-clusters", response_model=List[Dict[str, Any]])
-async def cluster_transactions(
+def cluster_transactions(
     min_cluster_size: int = Query(2, ge=2),
     max_distance: int = Query(2, ge=1, le=5)
 ):
@@ -226,7 +226,7 @@ async def cluster_transactions(
         raise HTTPException(status_code=500, detail=f"Error clustering transactions: {str(e)}")
 
 @router.get("/analytics/graph-metrics", response_model=Dict[str, Any])
-async def get_graph_metrics():
+def get_graph_metrics():
     """
     Calculate various metrics for the graph
 
@@ -240,7 +240,7 @@ async def get_graph_metrics():
         raise HTTPException(status_code=500, detail=f"Error calculating graph metrics: {str(e)}")
 
 @router.get("/export/json")
-async def export_graph_json():
+def export_graph_json():
     """
     Export the graph data as JSON
 
@@ -271,7 +271,7 @@ async def export_graph_json():
         raise HTTPException(status_code=500, detail=f"Error exporting graph data: {str(e)}")
 
 @router.get("/export/csv")
-async def export_graph_csv():
+def export_graph_csv():
     """
     Export the graph data as CSV files (nodes.csv and edges.csv)
 
@@ -349,7 +349,7 @@ async def export_graph_csv():
         raise HTTPException(status_code=500, detail=f"Error exporting graph data as CSV: {str(e)}")
 
 @router.post("/generate-data", response_model=Dict[str, Any])
-async def generate_data(
+def generate_data(
     background_tasks: BackgroundTasks,
     num_users: int = Query(10, ge=1, le=1000),
     num_companies: int = Query(5, ge=1, le=500),
