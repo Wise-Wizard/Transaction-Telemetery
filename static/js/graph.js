@@ -213,15 +213,45 @@ function hideBlankState() {
 // Load users list for selection (replaces loadGraphData)
 async function loadUsersList() {
     try {
-        console.log('Fetching users list...');
-        const response = await fetch('/api/users?limit=100');
+        console.log('Fetching initial users list...');
+        // Only load first 20 users initially for fast page load
+        const response = await fetch('/api/users?limit=20');
         const users = await response.json();
         console.log('Users received:', users.length);
         
         populateUsersList(users);
     } catch (error) {
         console.error('Error loading users list:', error);
-        alert('Failed to load users list. Please try again later.');
+        const container = document.getElementById('usersList');
+        container.innerHTML = '<div class="text-danger p-2 text-center">Error loading users</div>';
+    }
+}
+
+// Search users list (called when user types in search box)
+async function searchUsersList(query) {
+    const container = document.getElementById('usersList');
+    
+    if (!query || query.trim() === '') {
+        // If empty search, reload initial 20 users
+        loadUsersList();
+        return;
+    }
+    
+    container.innerHTML = '<div class="text-center p-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>';
+    
+    try {
+        const response = await fetch(`/api/users?limit=50&search=${encodeURIComponent(query)}`);
+        const users = await response.json();
+        
+        if (users.length === 0) {
+            container.innerHTML = '<div class="text-muted p-2 text-center">No users found</div>';
+            return;
+        }
+        
+        populateUsersList(users);
+    } catch (error) {
+        console.error('Error searching users:', error);
+        container.innerHTML = '<div class="text-danger p-2 text-center">Error searching users</div>';
     }
 }
 
@@ -370,7 +400,14 @@ function populateUsersList(users) {
         checkbox.type = 'checkbox';
         checkbox.id = `user-${user.id}`;
         checkbox.value = user.id;
-        checkbox.addEventListener('change', function() {
+        
+        // Restore previously selected state
+        if (selectedUserIds.includes(user.id)) {
+            checkbox.checked = true;
+        }
+        
+        checkbox.addEventListener('change', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
             if (this.checked) {
                 if (!selectedUserIds.includes(user.id)) {
                     selectedUserIds.push(user.id);
@@ -692,44 +729,8 @@ function hideLoading() {
 }
 
 // Search users via API
-async function searchUsers(query) {
-    const container = document.getElementById('usersList');
-    container.innerHTML = '<div class="text-center p-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>';
-    
-    try {
-        let url = '/api/users?limit=50';
-        if (query) {
-            url += `&search=${encodeURIComponent(query)}`;
-        }
-        
-        const response = await fetch(url);
-        const users = await response.json();
-        
-        container.innerHTML = '';
-        
-        if (users.length === 0) {
-            container.innerHTML = '<div class="text-muted p-2 text-center">No users found</div>';
-            return;
-        }
+// Old searchUsers function removed - replaced by searchUsersList above
 
-        users.forEach(user => {
-            const item = document.createElement('a');
-            item.className = 'list-group-item list-group-item-action';
-            item.setAttribute('data-id', user.id);
-            item.textContent = user.name || user.id;
-
-            item.addEventListener('click', async function() {
-                const nodeId = this.getAttribute('data-id');
-                await addNodeToGraph(nodeId, 'User');
-            });
-
-            container.appendChild(item);
-        });
-    } catch (error) {
-        console.error('Error searching users:', error);
-        container.innerHTML = '<div class="text-danger p-2 text-center">Error searching users</div>';
-    }
-}
 
 // Search transactions via API
 async function searchTransactions(query) {
@@ -954,9 +955,14 @@ async function addNodeToGraph(nodeId, type) {
 // Setup event listeners
 function setupEventListeners() {
     // User selection buttons
-    document.getElementById('loadSelectedUsers').addEventListener('click', loadSelectedUsersGraph);
+    document.getElementById('loadSelectedUsers').addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Load Graph clicked, selected users:', selectedUserIds);
+        loadSelectedUsersGraph();
+    });
     
-    document.getElementById('selectAllUsers').addEventListener('click', function() {
+    document.getElementById('selectAllUsers').addEventListener('click', function(e) {
+        e.preventDefault();
         const checkboxes = document.querySelectorAll('#usersList input[type="checkbox"]');
         selectedUserIds = [];
         checkboxes.forEach(cb => {
@@ -966,7 +972,8 @@ function setupEventListeners() {
         console.log('All users selected:', selectedUserIds);
     });
     
-    document.getElementById('clearAllUsers').addEventListener('click', function() {
+    document.getElementById('clearAllUsers').addEventListener('click', function(e) {
+        e.preventDefault();
         const checkboxes = document.querySelectorAll('#usersList input[type="checkbox"]');
         checkboxes.forEach(cb => cb.checked = false);
         selectedUserIds = [];
@@ -980,11 +987,11 @@ function setupEventListeners() {
     document.getElementById('showUsers').addEventListener('change', filterGraph);
     document.getElementById('showTransactions').addEventListener('change', filterGraph);
 
-    // User search (now just filters the checkbox list)
+    // User search (searches via API)
     let userSearchTimeout;
     document.getElementById('userSearchInput').addEventListener('input', function() {
         clearTimeout(userSearchTimeout);
-        userSearchTimeout = setTimeout(() => filterList('usersList', this.value), 300);
+        userSearchTimeout = setTimeout(() => searchUsersList(this.value), 300);
     });
 
     // Transaction search (Server-side)
@@ -997,7 +1004,7 @@ function setupEventListeners() {
     // Clear search buttons
     document.getElementById('clearUserSearch').addEventListener('click', function() {
         document.getElementById('userSearchInput').value = '';
-        filterList('usersList', '');
+        searchUsersList('');
     });
 
     document.getElementById('clearTransactionSearch').addEventListener('click', function() {
