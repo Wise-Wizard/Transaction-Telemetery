@@ -4,6 +4,7 @@ let allNodes = []; // All nodes from the API
 let allEdges = []; // All edges from the API
 let relationshipTypes = new Set(); // Set of all relationship types
 let currentLayout = 'cose-bilkent'; // Default layout
+let selectedUserIds = []; // Track selected user IDs
 
 // Initialize the application when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -47,8 +48,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize Cytoscape
     initCytoscape();
 
-    // Load data from API
-    loadGraphData();
+    // Show initial blank state message
+    showBlankState();
+    
+    // Load user list for selection
+    loadUsersList();
     
     // Initialize table
     loadTransactionsTable();
@@ -169,15 +173,74 @@ function initCytoscape() {
     });
 }
 
-// Load graph data from API
-async function loadGraphData() {
+// Show blank state message
+function showBlankState() {
+    const cyContainer = cy.container();
+    const existingMessage = cyContainer.querySelector('.blank-state-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    const message = document.createElement('div');
+    message.className = 'blank-state-message';
+    message.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #6c757d;
+        pointer-events: none;
+        z-index: 1000;
+    `;
+    message.innerHTML = `
+        <i class="fas fa-project-diagram" style="font-size: 4rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+        <h4>Select Users to Visualize</h4>
+        <p>Choose one or more users from the sidebar and click "Load Graph"</p>
+    `;
+    cyContainer.appendChild(message);
+}
+
+// Hide blank state message
+function hideBlankState() {
+    const cyContainer = cy.container();
+    const message = cyContainer.querySelector('.blank-state-message');
+    if (message) {
+        message.remove();
+    }
+}
+
+// Load users list for selection (replaces loadGraphData)
+async function loadUsersList() {
+    try {
+        console.log('Fetching users list...');
+        const response = await fetch('/api/users?limit=100');
+        const users = await response.json();
+        console.log('Users received:', users.length);
+        
+        populateUsersList(users);
+    } catch (error) {
+        console.error('Error loading users list:', error);
+        alert('Failed to load users list. Please try again later.');
+    }
+}
+
+// Load graph data for selected users
+async function loadSelectedUsersGraph() {
+    if (selectedUserIds.length === 0) {
+        alert('Please select at least one user');
+        return;
+    }
+    
     try {
         // Show loading indicator
         showLoading();
+        hideBlankState();
 
-        // Fetch graph data
-        console.log('Fetching graph data...');
-        const response = await fetch('/api/graph-data?limit=1000');
+        // Fetch graph data for selected users
+        console.log('Fetching graph data for users:', selectedUserIds);
+        const userIdsParam = selectedUserIds.join(',');
+        const response = await fetch(`/api/graph-data/users?user_ids=${encodeURIComponent(userIdsParam)}`);
         const data = await response.json();
         console.log('Graph data received:', data);
 
@@ -187,7 +250,11 @@ async function loadGraphData() {
 
         console.log(`Loaded ${allNodes.length} nodes and ${allEdges.length} edges`);
 
+        // Clear existing graph
+        cy.elements().remove();
+        
         // Extract relationship types
+        relationshipTypes.clear();
         allEdges.forEach(edge => {
             relationshipTypes.add(edge.data.relationship);
         });
@@ -197,8 +264,7 @@ async function loadGraphData() {
         // Populate relationship filters
         populateRelationshipFilters();
 
-        // Populate user and transaction lists
-        populateUsersList();
+        // Populate transaction list (from loaded data)
         populateTransactionsList();
 
         // Add data to Cytoscape
@@ -225,6 +291,7 @@ async function loadGraphData() {
     } catch (error) {
         console.error('Error loading graph data:', error);
         hideLoading();
+        showBlankState();
         alert('Failed to load graph data. Please try again later.');
     }
 }
@@ -284,25 +351,44 @@ function populateRelationshipFilters() {
     });
 }
 
-// Populate users list
-function populateUsersList() {
+// Populate users list with checkboxes
+function populateUsersList(users) {
     const container = document.getElementById('usersList');
     container.innerHTML = '';
 
-    const users = allNodes.filter(node => node.data.type === 'User');
+    if (!users || users.length === 0) {
+        container.innerHTML = '<div class="text-muted p-2 text-center">No users found</div>';
+        return;
+    }
 
     users.forEach(user => {
-        const item = document.createElement('a');
-        item.className = 'list-group-item list-group-item-action';
-        item.setAttribute('data-id', user.data.id);
-        item.textContent = user.data.label;
-
-        item.addEventListener('click', function() {
-            const nodeId = this.getAttribute('data-id');
-            const node = cy.getElementById(nodeId);
-            selectNode(node);
+        const item = document.createElement('div');
+        item.className = 'form-check p-2';
+        
+        const checkbox = document.createElement('input');
+        checkbox.className = 'form-check-input';
+        checkbox.type = 'checkbox';
+        checkbox.id = `user-${user.id}`;
+        checkbox.value = user.id;
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                if (!selectedUserIds.includes(user.id)) {
+                    selectedUserIds.push(user.id);
+                }
+            } else {
+                selectedUserIds = selectedUserIds.filter(id => id !== user.id);
+            }
+            console.log('Selected users:', selectedUserIds);
         });
-
+        
+        const label = document.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = `user-${user.id}`;
+        label.textContent = user.name || user.id;
+        label.style.cursor = 'pointer';
+        
+        item.appendChild(checkbox);
+        item.appendChild(label);
         container.appendChild(item);
     });
 }
@@ -867,6 +953,26 @@ async function addNodeToGraph(nodeId, type) {
 
 // Setup event listeners
 function setupEventListeners() {
+    // User selection buttons
+    document.getElementById('loadSelectedUsers').addEventListener('click', loadSelectedUsersGraph);
+    
+    document.getElementById('selectAllUsers').addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('#usersList input[type="checkbox"]');
+        selectedUserIds = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            selectedUserIds.push(cb.value);
+        });
+        console.log('All users selected:', selectedUserIds);
+    });
+    
+    document.getElementById('clearAllUsers').addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('#usersList input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        selectedUserIds = [];
+        console.log('All users deselected');
+    });
+    
     // Search input
     document.getElementById('searchInput').addEventListener('input', filterGraph);
 
@@ -874,11 +980,11 @@ function setupEventListeners() {
     document.getElementById('showUsers').addEventListener('change', filterGraph);
     document.getElementById('showTransactions').addEventListener('change', filterGraph);
 
-    // User search (Server-side)
+    // User search (now just filters the checkbox list)
     let userSearchTimeout;
     document.getElementById('userSearchInput').addEventListener('input', function() {
         clearTimeout(userSearchTimeout);
-        userSearchTimeout = setTimeout(() => searchUsers(this.value), 300);
+        userSearchTimeout = setTimeout(() => filterList('usersList', this.value), 300);
     });
 
     // Transaction search (Server-side)
@@ -891,7 +997,7 @@ function setupEventListeners() {
     // Clear search buttons
     document.getElementById('clearUserSearch').addEventListener('click', function() {
         document.getElementById('userSearchInput').value = '';
-        searchUsers('');
+        filterList('usersList', '');
     });
 
     document.getElementById('clearTransactionSearch').addEventListener('click', function() {

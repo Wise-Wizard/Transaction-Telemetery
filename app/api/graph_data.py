@@ -127,4 +127,97 @@ class GraphDataService:
 
             edges.append(cytoscape_edge)
 
+
         return edges
+
+    @staticmethod
+    def get_user_graph_data(user_ids: List[str], depth: int = 1) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Get graph data for specific users and their related transactions/relationships
+        
+        Args:
+            user_ids: List of user IDs to fetch data for
+            depth: Relationship depth (currently supports depth=1)
+        
+        Returns:
+            Dictionary with 'nodes' and 'edges' arrays in Cytoscape format
+        """
+        if not user_ids:
+            return {"nodes": [], "edges": []}
+        
+        # Get user nodes and their transactions
+        nodes = GraphDataService._get_user_nodes(user_ids)
+        
+        # Get edges for these nodes
+        node_ids = [node["data"]["id"] for node in nodes]
+        edges = GraphDataService._get_all_edges(node_ids)
+        
+        return {
+            "nodes": nodes,
+            "edges": edges
+        }
+    
+    @staticmethod
+    def _get_user_nodes(user_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Get specific users and their related transactions
+        """
+        query = """
+        MATCH (u:User)
+        WHERE u.id IN $user_ids
+        WITH collect(u) as users
+        
+        // Get transactions where selected users are sender or receiver
+        MATCH (sender:User)-[:SENT]->(t:Transaction)-[:RECEIVED_BY]->(receiver:User)
+        WHERE sender.id IN $user_ids OR receiver.id IN $user_ids
+        
+        // Collect all nodes
+        WITH users + collect(t) + collect(sender) + collect(receiver) as all_nodes
+        UNWIND all_nodes as n
+        RETURN DISTINCT n
+        """
+        
+        result = db.execute_query(query, {"user_ids": user_ids})
+        
+        nodes = []
+        for record in result:
+            node = record["n"]
+            node_data = serialize_neo4j_object(node)
+            
+            # Convert datetime objects to strings
+            for key, value in node_data.items():
+                if isinstance(value, datetime):
+                    node_data[key] = value.isoformat()
+            
+            # Create Cytoscape.js node format
+            cytoscape_node = {
+                "data": {
+                    "id": node_data["id"],
+                    "type": list(node.labels)[0] if node.labels else "Unknown",
+                }
+            }
+            
+            # Add label based on node type
+            if "User" in node.labels:
+                cytoscape_node["data"]["label"] = node_data.get("name", "Unknown User")
+                # Add user-specific properties
+                for key in ["email", "phone", "address", "entity_type", "company_name"]:
+                    if key in node_data:
+                        cytoscape_node["data"][key] = node_data[key]
+            elif "Transaction" in node.labels:
+                # Format transaction label
+                amount = node_data.get("amount", 0)
+                currency = node_data.get("currency", "USD")
+                cytoscape_node["data"]["label"] = f"Transaction: {amount} {currency}"
+                
+                # Add transaction-specific properties
+                for key in ["amount", "currency", "timestamp", "status", "ip_address", "device_id"]:
+                    if key in node_data:
+                        if key == "timestamp" and isinstance(node_data[key], datetime):
+                            cytoscape_node["data"][key] = node_data[key].isoformat()
+                        else:
+                            cytoscape_node["data"][key] = node_data[key]
+            
+            nodes.append(cytoscape_node)
+        
+        return nodes

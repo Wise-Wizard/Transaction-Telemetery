@@ -163,6 +163,52 @@ def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
 
     return JSONResponse(content=converted_data)
 
+@router.get("/graph-data/users")
+def get_user_graph_data(user_ids: str = Query(..., description="Comma-separated list of user IDs")):
+    """
+    Get graph data for specific users and their related transactions
+    
+    Args:
+        user_ids: Comma-separated list of user IDs
+    
+    Returns:
+        Graph data in Cytoscape format for the selected users
+    """
+    from fastapi.responses import JSONResponse
+    
+    # Parse user IDs from comma-separated string
+    user_id_list = [uid.strip() for uid in user_ids.split(",") if uid.strip()]
+    
+    if not user_id_list:
+        return JSONResponse(content={"nodes": [], "edges": []})
+    
+    # Create a simple function to convert Neo4j DateTime objects to strings
+    def convert_neo4j_types(obj):
+        from neo4j.time import DateTime
+        from datetime import datetime
+
+        if isinstance(obj, DateTime):
+            # Convert Neo4j DateTime to string
+            return f"{obj.year}-{obj.month:02d}-{obj.day:02d}T{obj.hour:02d}:{obj.minute:02d}:{obj.second:02d}"
+        elif isinstance(obj, datetime):
+            # Convert Python datetime to string
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            # Recursively convert dictionary values
+            return {key: convert_neo4j_types(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            # Recursively convert list items
+            return [convert_neo4j_types(item) for item in obj]
+        else:
+            # Return other types as is
+            return obj
+    
+    # Get the data for selected users
+    data = GraphDataService.get_user_graph_data(user_id_list)
+    converted_data = convert_neo4j_types(data)
+    
+    return JSONResponse(content=converted_data)
+
 @router.get("/analytics/shortest-path", response_model=Dict[str, Any])
 def find_shortest_path(
     source_id: str,
