@@ -163,18 +163,20 @@ class GraphDataService:
         Get specific users and their related transactions
         """
         query = """
+        // Get selected users
         MATCH (u:User)
         WHERE u.id IN $user_ids
-        WITH collect(u) as users
         
-        // Get transactions where selected users are sender or receiver
-        MATCH (sender:User)-[:SENT]->(t:Transaction)-[:RECEIVED_BY]->(receiver:User)
+        // Get transactions where selected users are involved
+        OPTIONAL MATCH (sender:User)-[:SENT]->(t:Transaction)-[:RECEIVED_BY]->(receiver:User)
         WHERE sender.id IN $user_ids OR receiver.id IN $user_ids
         
-        // Collect all nodes
-        WITH users + collect(t) + collect(sender) + collect(receiver) as all_nodes
-        UNWIND all_nodes as n
-        RETURN DISTINCT n
+        // Return all distinct nodes
+        WITH u, t, sender, receiver
+        UNWIND [u, t, sender, receiver] as node
+        WITH DISTINCT node
+        WHERE node IS NOT NULL
+        RETURN node as n
         """
         
         result = db.execute_query(query, {"user_ids": user_ids})
