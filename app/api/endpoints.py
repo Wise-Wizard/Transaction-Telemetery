@@ -163,6 +163,27 @@ def get_graph_data(limit: int = Query(1000, ge=1, le=10000)):
 
     return JSONResponse(content=converted_data)
 
+# Helper function to convert Neo4j types
+def convert_neo4j_types(obj):
+    from neo4j.time import DateTime
+    from datetime import datetime
+
+    if isinstance(obj, DateTime):
+        # Convert Neo4j DateTime to string
+        return f"{obj.year}-{obj.month:02d}-{obj.day:02d}T{obj.hour:02d}:{obj.minute:02d}:{obj.second:02d}"
+    elif isinstance(obj, datetime):
+        # Convert Python datetime to string
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        # Recursively convert dictionary values
+        return {key: convert_neo4j_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        # Recursively convert list items
+        return [convert_neo4j_types(item) for item in obj]
+    else:
+        # Return other types as is
+        return obj
+
 @router.get("/graph-data/users")
 def get_user_graph_data(user_ids: str = Query(..., description="Comma-separated list of user IDs")):
     """
@@ -181,27 +202,6 @@ def get_user_graph_data(user_ids: str = Query(..., description="Comma-separated 
     
     if not user_id_list:
         return JSONResponse(content={"nodes": [], "edges": []})
-    
-    # Create a simple function to convert Neo4j DateTime objects to strings
-    def convert_neo4j_types(obj):
-        from neo4j.time import DateTime
-        from datetime import datetime
-
-        if isinstance(obj, DateTime):
-            # Convert Neo4j DateTime to string
-            return f"{obj.year}-{obj.month:02d}-{obj.day:02d}T{obj.hour:02d}:{obj.minute:02d}:{obj.second:02d}"
-        elif isinstance(obj, datetime):
-            # Convert Python datetime to string
-            return obj.isoformat()
-        elif isinstance(obj, dict):
-            # Recursively convert dictionary values
-            return {key: convert_neo4j_types(value) for key, value in obj.items()}
-        elif isinstance(obj, list):
-            # Recursively convert list items
-            return [convert_neo4j_types(item) for item in obj]
-        else:
-            # Return other types as is
-            return obj
     
     # Get the data for selected users
     data = GraphDataService.get_user_graph_data(user_id_list)

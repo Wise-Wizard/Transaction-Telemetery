@@ -216,14 +216,23 @@ async function loadUsersList() {
         console.log('Fetching initial users list...');
         // Only load first 20 users initially for fast page load
         const response = await fetch('/api/users?limit=20');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const users = await response.json();
-        console.log('Users received:', users.length);
+        console.log('Users received:', users.length, users);
+        
+        if (!Array.isArray(users)) {
+            throw new Error('Expected array of users, got: ' + typeof users);
+        }
         
         populateUsersList(users);
     } catch (error) {
         console.error('Error loading users list:', error);
         const container = document.getElementById('usersList');
-        container.innerHTML = '<div class="text-danger p-2 text-center">Error loading users</div>';
+        container.innerHTML = '<div class="text-danger p-2 text-center">Error loading users: ' + error.message + '</div>';
     }
 }
 
@@ -241,6 +250,11 @@ async function searchUsersList(query) {
     
     try {
         const response = await fetch(`/api/users?limit=50&search=${encodeURIComponent(query)}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const users = await response.json();
         
         if (users.length === 0) {
@@ -251,12 +265,14 @@ async function searchUsersList(query) {
         populateUsersList(users);
     } catch (error) {
         console.error('Error searching users:', error);
-        container.innerHTML = '<div class="text-danger p-2 text-center">Error searching users</div>';
+        container.innerHTML = '<div class="text-danger p-2 text-center">Error searching users: ' + error.message + '</div>';
     }
 }
 
 // Load graph data for selected users
 async function loadSelectedUsersGraph() {
+    console.log('loadSelectedUsersGraph called, selectedUserIds:', selectedUserIds);
+    
     if (selectedUserIds.length === 0) {
         alert('Please select at least one user');
         return;
@@ -270,7 +286,16 @@ async function loadSelectedUsersGraph() {
         // Fetch graph data for selected users
         console.log('Fetching graph data for users:', selectedUserIds);
         const userIdsParam = selectedUserIds.join(',');
-        const response = await fetch(`/api/graph-data/users?user_ids=${encodeURIComponent(userIdsParam)}`);
+        const url = `/api/graph-data/users?user_ids=${encodeURIComponent(userIdsParam)}`;
+        console.log('Fetching URL:', url);
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
         const data = await response.json();
         console.log('Graph data received:', data);
 
@@ -280,7 +305,7 @@ async function loadSelectedUsersGraph() {
 
         console.log(`Loaded ${allNodes.length} nodes and ${allEdges.length} edges`);
 
-        // Clear existing graph
+        //Clear existing graph
         cy.elements().remove();
         
         // Extract relationship types
@@ -322,7 +347,7 @@ async function loadSelectedUsersGraph() {
         console.error('Error loading graph data:', error);
         hideLoading();
         showBlankState();
-        alert('Failed to load graph data. Please try again later.');
+        alert('Failed to load graph data: ' + error.message);
     }
 }
 
